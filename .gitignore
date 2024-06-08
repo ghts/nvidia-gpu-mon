@@ -1,0 +1,45 @@
+# Compiled Object files, Static and Dynamic libs (Shared Objects) 
+*.o 
+*.a 
+*.so
+*.dll
+
+# Folders
+_obj
+_test
+
+# IDE
+.project
+.settings
+.idea
+.pydevproject
+.vscode
+
+# Architecture specific extensions/prefixes 
+*.[568vq] 
+[568vq].out 
+
+*.cgo1.go 
+*.cgo2.c 
+_cgo_defun.c 
+_cgo_gotypes.go 
+_cgo_export.* 
+
+_testmain.go 
+
+*.bak
+*.csv
+*.dat
+*.exe
+*.ini
+*.jpg
+*.json
+*.lock
+*.log
+*.png
+*.prof
+*.pyc
+*.test
+*.xlsx
+*.xml
+
