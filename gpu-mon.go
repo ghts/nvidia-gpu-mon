@@ -22,7 +22,6 @@ func gpu온도_측정() ([]float64, error) {
 	}
 
 	행_모음 := strings.Split(string(출력_문자열), "\n")
-
 	온도_모음 := make([]float64, 0)
 
 	for _, 행 := range 행_모음 {
@@ -51,9 +50,9 @@ func f경고음_발생() {
 		return
 	}
 
-	반환값, _, _ := proc.Call(0xFFFFFFFF) // 0xFFFFFFFF is the frequency for a standard f경고음_발생 sound
+	반환값, _, _ := proc.Call(0xFFFFFFFF) // '0xFFFFFFFF'은 경고음 표준 주파수.
 	if 반환값 == 0 {
-		fmt.Println("Failed to produce f경고음_발생 sound")
+		fmt.Println("경고음 발생 실패.")
 	}
 }
 
