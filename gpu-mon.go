@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -58,19 +59,28 @@ func f경고음_발생() {
 
 func gpu온도_확인() {
 	if 온도_모음, 에러 := gpu온도_측정(); 에러 == nil {
-		비프음_발생_여부 := false
+		버퍼 := new(bytes.Buffer)
+		경고음_발생_여부 := false
 
 		for i, 온도 := range 온도_모음 {
+			버퍼.WriteString(fmt.Sprintf("%.0f°C", 온도))
+
 			if 온도 > 기준_온도 {
-				비프음_발생_여부 = true // 온도가 50를 넘어가면 비프음 낸다.
-				fmt.Printf("GPU %d 과열 : %.1f°C (!!)\n", i, 온도)
-			} else {
-				fmt.Printf("GPU %d 온도 : %.1f°C\n", i, 온도)
+				버퍼.WriteString("(!!)")
+				경고음_발생_여부 = true
+			}
+
+			if i < len(온도_모음)-1 {
+				버퍼.WriteString(", ")
 			}
 		}
 
-		if 비프음_발생_여부 {
+		시각_문자열 := time.Now().Format("15:04:05")
+		if 경고음_발생_여부 {
+			fmt.Printf("** GPU 과열 ** %s : %s\n", 시각_문자열, 버퍼.String())
 			f경고음_발생()
+		} else {
+			fmt.Printf("%s : %s\n", 시각_문자열, 버퍼.String())
 		}
 	}
 }
