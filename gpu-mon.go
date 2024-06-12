@@ -18,10 +18,14 @@ import (
 )
 
 const 기준_온도_기본값 = 48.0
-const 클럭_회복_온도_차이 = 6.0
+const 클럭_회복_기준 = 6.0
 
-var 과열_발생_클럭 float64
-var Ch종료 = make(chan struct{})
+var (
+	Ch종료       = make(chan struct{})
+	과열_발생_클럭   float64
+	메모리_클럭     float64
+	지원되는_클럭_모음 []float64
+)
 
 func main() {
 	fmt.Println("실행을 중지하려면 'Ctrl+C'를 누르세요.")
@@ -29,24 +33,21 @@ func main() {
 
 	if 현재_클럭 := f현재_클럭(); 현재_클럭 > f최저_클럭() {
 		과열_발생_클럭 = 현재_클럭
+	} else {
+		과열_발생_클럭 = f최고_클럭()
 	}
-		
-	티커 := time.NewTicker(10 * time.Second) // 10초마다 확인.
 
 	최근_온도 := gpu온도_확인(0.0)
-
-	if 최근_온도 < f기준_온도()-클럭_회복_온도_차이 && f현재_클럭() == f최저_클럭() {
-		f클럭_변경(f지원되는_클럭_모음()[0]) // 실행 초기에 이미 최저 클럭인 경우 속도 회복.
-	}
+	ticker := time.NewTicker(10 * time.Second) // 10초마다 확인.
 
 	go func() {
 		for {
 			// Ctrl-C로 중지할 때까지 무한 반복
 			select {
-			case <-티커.C:
+			case <-ticker.C:
 				최근_온도 = gpu온도_확인(최근_온도)
 			case <-Ch종료:
-				티커.Stop()
+				ticker.Stop()
 				return
 			}
 		}
@@ -73,19 +74,17 @@ func f기준_온도() float64 {
 
 // GPU 온도 알아내기.
 func gpu온도_측정() ([]float64, error) {
-	cli명령 := exec.Command("nvidia-smi", "--query-gpu", "temperature.gpu", "--format=csv,noheader")
-	출력_문자열, 에러 := cli명령.Output()
+	커맨드 := exec.Command("nvidia-smi", "--query-gpu", "temperature.gpu", "--format=csv,noheader")
+	출력_바이트_모음, 에러 := 커맨드.Output()
 	if 에러 != nil {
 		return nil, 에러
 	}
 
-	행_모음 := strings.Split(string(출력_문자열), "\n")
+	행_모음 := strings.Split(string(출력_바이트_모음), "\n")
 	온도_모음 := make([]float64, 0)
 
 	for _, 행 := range 행_모음 {
-		if 온도_문자열 := strings.TrimSpace(행); 온도_문자열 == "" {
-			break
-		} else if 온도, 에러 := strconv.ParseFloat(온도_문자열, 64); 에러 == nil {
+		if 온도, 에러 := strconv.ParseFloat(f숫자_추출(행), 64); 에러 == nil {
 			온도_모음 = append(온도_모음, 온도)
 		}
 	}
@@ -124,15 +123,14 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64) {
 		온도_예측치 := 현재_온도 + 온도_상승치
 
 		if 기준_온도_초과 {
-			fmt.Printf("** GPU 과열 ** %s : %s\n", 시각_문자열, 버퍼.String())
+			f경고음_발생()
 
 			if 현재_클럭 := f현재_클럭(); 현재_클럭 < 과열_발생_클럭 {
 				과열_발생_클럭 = 현재_클럭 // 과열 발생 클럭 기록
 			}
 
-			fmt.Printf("** GPU 동작 클럭을 최저로 낮춰서 과열을 방지합니다. **\n")
-			f경고음_발생()
-			f클럭_변경(f최저_클럭())
+			fmt.Printf("** GPU 과열 ** %s : %s. 과열 방지를 위해서 클럭을 최저값으로 낮춥니다. %vMHz **\n", 시각_문자열, 버퍼.String(), f클럭_변경(f최저_클럭()))
+
 			return
 		} else {
 			fmt.Printf("%s : %s\n", 시각_문자열, 버퍼.String())
@@ -141,13 +139,12 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64) {
 		현재_클럭 := f현재_클럭()
 		최저_클럭 := 현재_클럭 == f최저_클럭()
 
-		if 최저_클럭 && 현재_온도 < 기준_온도-클럭_회복_온도_차이 {
-			f클럭_한단계_낮추기(과열_발생_클럭) // 온도가 낮아지면 클럭 정상 회복.
-			최저_클럭 = false
+		if 최저_클럭 && 현재_온도 < 기준_온도-클럭_회복_기준 {
+			fmt.Printf("** 온도가 낮아졌으므로 GPU 클럭을 회복합니다. %vMHz **\n", f클럭_한단계_낮추기(과열_발생_클럭))
 		} else if !최저_클럭 && 온도_예측치 > 현재_온도 && 온도_예측치 > 기준_온도-5.0 {
-			f클럭_한단계_낮추기(현재_클럭) // 온도가 상승 중인데, 기준 온도에 근접했다면 클럭 낮추기.
+			fmt.Printf("** 온도 상승 중, 기준 온도 근접. %vMHz **\n", f클럭_한단계_낮추기(현재_클럭))
 		} else if !최저_클럭 && 현재_온도 > 기준_온도-2.5 && 온도_예측치 > 기준_온도-2.5 {
-			f클럭_한단계_낮추기(현재_클럭) // 온도 상승 무관하게 기준 온도에 아주 근접했다면 클럭 낮추기.
+			fmt.Printf("** 기준 온도 초근접. %vMHz **\n", f클럭_한단계_낮추기(현재_클럭))
 		}
 	}
 
@@ -175,6 +172,7 @@ func f경고음_발생() {
 	}
 }
 
+// 참고 링크 : https://github.com/golang/go/issues/28804#issuecomment-505326268
 func f관리자_여부() bool {
 	var sid *windows.SID
 
@@ -194,8 +192,6 @@ func f관리자_여부() bool {
 	}
 	defer windows.FreeSid(sid)
 
-	// 아래 행이 왜 동작하는 지는 모르겠지만, 하여튼 정상 동작한다.
-	// https://github.com/golang/go/issues/28804#issuecomment-438838144
 	token := windows.Token(0)
 
 	if 관리자_여부, 에러 := token.IsMember(sid); 에러 != nil {
@@ -247,24 +243,16 @@ func f클럭_정보_문자열_모음() []string {
 		return make([]string, 0)
 	}
 
-	전체_바이트_모음 := bytes.Split(출력_바이트_모음, []byte("\n"))
-	행_문자열_모음 := make([]string, 0)
-
-	for _, 행_바이트_모음 := range 전체_바이트_모음 {
-		행_문자열 := string(행_바이트_모음)
-		행_문자열_모음 = append(행_문자열_모음, 행_문자열)
-	}
-
-	return 행_문자열_모음
+	return strings.Split(string(출력_바이트_모음), "\n")
 }
 
 func f현재_클럭() float64 {
-	문자열_모음 := f클럭_정보_문자열_모음()
+	행_모음 := f클럭_정보_문자열_모음()
 	인덱스_Application_Clock := -1
 
-	for i, 문자열 := range 문자열_모음 {
-		if strings.Contains(문자열, "Applications Clocks") &&
-			!strings.Contains(문자열, "Default Applications Clocks") {
+	for i, 행 := range 행_모음 {
+		if strings.Contains(행, "Applications Clocks") &&
+			!strings.Contains(행, "Default Applications Clocks") {
 			인덱스_Application_Clock = i
 			break
 		}
@@ -275,37 +263,34 @@ func f현재_클럭() float64 {
 		return -1.0
 	}
 
-	GPU클럭_행_문자열 := 문자열_모음[인덱스_Application_Clock+1]
-	if !strings.Contains(GPU클럭_행_문자열, "Graphics") {
+	GPU클럭_행 := 행_모음[인덱스_Application_Clock+1]
+	if !strings.Contains(GPU클럭_행, "Graphics") {
 		fmt.Println("Application Clock GPU값 미발견")
 		return -1.0
 	}
 
-	GPU클럭_문자열 := f숫자_추출(GPU클럭_행_문자열)
-	if GPU클럭, 에러 := strconv.ParseFloat(GPU클럭_문자열, 64); 에러 != nil {
+	if GPU클럭, 에러 := strconv.ParseFloat(f숫자_추출(GPU클럭_행), 64); 에러 != nil {
 		return -1.0
 	} else {
 		return GPU클럭
 	}
 }
 
-func f클럭_한단계_낮추기(기준_클럭 float64) {
-	클럭_모음 := f지원되는_클럭_모음()
-	최저_클럭 := 클럭_모음[len(클럭_모음)-1]
-
-	if 기준_클럭 <= 최저_클럭 {
-		return
+func f클럭_한단계_낮추기(기준_클럭 float64) string {
+	if 기준_클럭 <= f최저_클럭() {
+		return strconv.Itoa(int(기준_클럭))
 	}
 
 	for _, 클럭 := range f지원되는_클럭_모음() {
 		if 클럭 < 기준_클럭 {
-			f클럭_변경(클럭)
-			return
+			return f클럭_변경(클럭)
 		}
 	}
+
+	return strconv.Itoa(int(기준_클럭))
 }
 
-func f클럭_변경(GPU클럭 float64) {
+func f클럭_변경(GPU클럭 float64) string {
 	if !f관리자_여부() {
 		fmt.Printf("** GPU 동작 클럭을 변경하려면 '관리자 권한'이 필요합니다. **\n")
 		f관리자_권한으로_재실행()
@@ -316,32 +301,11 @@ func f클럭_변경(GPU클럭 float64) {
 	메모리_클럭_문자열 := strconv.Itoa(int(f메모리_클럭()))
 	ac인수 := 메모리_클럭_문자열 + "," + GPU_클럭_문자열
 
-	//fmt.Println("클럭 변경 :", GPU_클럭_문자열)
-
 	커맨드_실행 := exec.Command("nvidia-smi", "-ac", ac인수)
 	커맨드_실행.Run()
+
+	return GPU_클럭_문자열
 }
-
-func f문자열_검색2(문자열_모음 []string, 검색어1, 검색어2 string) string {
-	검색어1_찾음 := false
-	for i, 문자열 := range 문자열_모음 {
-		if strings.Contains(문자열, 검색어1) {
-			검색어1_찾음 = true
-			continue
-		} else if !검색어1_찾음 {
-			continue
-		}
-
-		if strings.Contains(문자열, 검색어2) {
-			return 문자열_모음[i]
-		}
-	}
-
-	return ""
-}
-
-var 메모리_클럭 float64
-var 지원되는_클럭_모음 []float64
 
 func f메모리_클럭() float64 {
 	if 메모리_클럭 == 0.0 {
@@ -351,8 +315,16 @@ func f메모리_클럭() float64 {
 	return 메모리_클럭
 }
 
+func f최고_클럭() float64 {
+	if len(지원되는_클럭_모음) == 0 {
+		f클럭_정보_초기화()
+	}
+
+	return 지원되는_클럭_모음[0]
+}
+
 func f최저_클럭() float64 {
-	if 메모리_클럭 == 0.0 {
+	if len(지원되는_클럭_모음) == 0 {
 		f클럭_정보_초기화()
 	}
 
@@ -375,37 +347,25 @@ func f클럭_정보_초기화() {
 		return
 	}
 
-	전체_바이트_모음 := bytes.Split(출력_바이트_모음, []byte("\n"))
+	행_모음 := strings.Split(string(출력_바이트_모음), "\n")
 
 	// 메모리 클럭
-	for _, 행_바이트_모음 := range 전체_바이트_모음 {
-		행 := string(행_바이트_모음)
-
+	for _, 행 := range 행_모음 {
 		if !strings.Contains(행, "Memory") {
 			continue
-		}
-
-		숫자_문자열 := f숫자_추출(행)
-
-		if 숫자값, 에러 := strconv.ParseFloat(숫자_문자열, 64); 에러 == nil {
+		} else if 숫자값, 에러 := strconv.ParseFloat(f숫자_추출(행), 64); 에러 == nil {
 			메모리_클럭 = 숫자값
 			break
 		}
 	}
 
 	// GPU 클럭
-	지원되는_클럭_맵 := make(map[float64]bool, 0)
+	지원되는_클럭_맵 := make(map[float64]bool)
 
-	for _, 행_바이트_모음 := range 전체_바이트_모음 {
-		행 := string(행_바이트_모음)
-
+	for _, 행 := range 행_모음 {
 		if !strings.Contains(행, "Graphics") {
 			continue
-		}
-
-		숫자_문자열 := f숫자_추출(행)
-
-		if 숫자값, 에러 := strconv.ParseFloat(숫자_문자열, 64); 에러 == nil {
+		} else if 숫자값, 에러 := strconv.ParseFloat(f숫자_추출(행), 64); 에러 == nil {
 			지원되는_클럭_맵[숫자값] = true
 		}
 	}
