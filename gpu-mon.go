@@ -15,9 +15,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-//var 기준_온도 float64 = 48 // 섭씨
-
-var 기준_온도 float64 = 10
+var 기준_온도 float64 = 48 // 섭씨
 
 func main() {
 	f기준_온도_설정()
