@@ -19,12 +19,13 @@ import (
 
 const 기준_온도_기본값 = 49.0
 
+var Ch종료 = make(chan struct{})
+
 func main() {
 	fmt.Println("실행을 중지하려면 'Ctrl+C'를 누르세요.")
 	fmt.Printf("\n기준 온도 : %v°C, 현재 클럭 : %vMHz\n\n", int(f기준_온도()), int(f현재_클럭()))
 
 	티커 := time.NewTicker(10 * time.Second) // 10초마다 확인.
-	ch종료 := make(chan struct{})
 
 	최근_온도 := gpu온도_확인(0.0)
 
@@ -33,11 +34,12 @@ func main() {
 	}
 
 	go func() {
-		for { // Ctrl-C로 중지할 때까지 무한 반복
+		for {
+			// Ctrl-C로 중지할 때까지 무한 반복
 			select {
 			case <-티커.C:
 				최근_온도 = gpu온도_확인(최근_온도)
-			case <-ch종료:
+			case <-Ch종료:
 				티커.Stop()
 				return
 			}
@@ -45,7 +47,7 @@ func main() {
 	}()
 
 	// Wait for a signal to ch종료 (e.g. Ctrl+C)
-	<-ch종료
+	<-Ch종료
 }
 
 func f기준_온도() float64 {
@@ -316,6 +318,7 @@ func f클럭_변경(GPU클럭 float64) {
 	if !f관리자_여부() {
 		fmt.Printf("** GPU 동작 클럭을 변경하려면 '관리자 권한'이 필요합니다. **\n")
 		f관리자_권한으로_재실행()
+		close(Ch종료)
 	}
 
 	GPU_클럭_문자열 := strconv.Itoa(int(GPU클럭))
