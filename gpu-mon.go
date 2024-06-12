@@ -20,12 +20,17 @@ import (
 const 기준_온도_기본값 = 48.0
 const 클럭_회복_온도_차이 = 6.0
 
+var 과열_발생_클럭 float64
 var Ch종료 = make(chan struct{})
 
 func main() {
 	fmt.Println("실행을 중지하려면 'Ctrl+C'를 누르세요.")
 	fmt.Printf("\n기준 온도 : %v°C, 현재 클럭 : %vMHz\n\n", int(f기준_온도()), int(f현재_클럭()))
 
+	if 현재_클럭 := f현재_클럭(); 현재_클럭 > f최저_클럭() {
+		과열_발생_클럭 = 현재_클럭
+	}
+		
 	티커 := time.NewTicker(10 * time.Second) // 10초마다 확인.
 
 	최근_온도 := gpu온도_확인(0.0)
@@ -87,8 +92,6 @@ func gpu온도_측정() ([]float64, error) {
 
 	return 온도_모음, nil
 }
-
-var 과열_발생_클럭 = f지원되는_클럭_모음()[0]
 
 func gpu온도_확인(최근_온도 float64) (현재_온도 float64) {
 	기준_온도 := f기준_온도()
