@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"golang.org/x/exp/constraints"
+	"golang.org/x/sys/windows"
 	"log"
 	"os"
 	"os/exec"
@@ -14,8 +15,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"golang.org/x/sys/windows"
 )
 
 const 기준_온도_기본값 = 48.0
