@@ -96,7 +96,13 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64) {
 	기준_온도 := f기준_온도()
 
 	if 온도_모음, 에러 := gpu온도_측정(); 에러 == nil {
-		현재_온도 = f평균(온도_모음)
+		현재_온도 = f평균값(온도_모음...)
+		최고_온도 := f최대값(온도_모음...)
+
+		if 최고_온도-현재_온도 > 2.0 {
+			현재_온도 = 최고_온도 // GPU 1개만 집중적으로 사용되는 경우 대응.
+		}
+
 		기준_온도_초과 := false
 		버퍼 := new(bytes.Buffer)
 
@@ -146,22 +152,6 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64) {
 	}
 
 	return 현재_온도
-}
-
-func f최소값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
-	if len(값_모음) == 0 {
-		panic("입력값이 없습니다.")
-	}
-
-	최소값 := 값_모음[0]
-
-	for _, 값 := range 값_모음 {
-		if 값 < 최소값 {
-			최소값 = 값
-		}
-	}
-
-	return 최소값
 }
 
 // 경고음 발생시키기
@@ -219,14 +209,50 @@ func f숫자_추출(문자열 string) string {
 	return re.FindString(문자열)
 }
 
-func f평균(값_모음 []float64) float64 {
-	합계 := 0.0
+func f최대값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
+	if len(값_모음) == 0 {
+		panic("입력값이 없습니다.")
+	}
+
+	최대값 := 값_모음[0]
+
+	for _, 값 := range 값_모음 {
+		if 값 > 최대값 {
+			최대값 = 값
+		}
+	}
+
+	return 최대값
+}
+
+func f최소값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
+	if len(값_모음) == 0 {
+		panic("입력값이 없습니다.")
+	}
+
+	최소값 := 값_모음[0]
+
+	for _, 값 := range 값_모음 {
+		if 값 < 최소값 {
+			최소값 = 값
+		}
+	}
+
+	return 최소값
+}
+
+func f평균값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
+	if len(값_모음) == 0 {
+		panic("입력값이 없습니다.")
+	}
+
+	합계 := T(0)
 
 	for _, 값 := range 값_모음 {
 		합계 += 값
 	}
 
-	return 합계 / float64(len(값_모음))
+	return 합계 / T(len(값_모음))
 }
 
 func f관리자_권한으로_재실행() {
