@@ -23,7 +23,15 @@ func F관리자_여부() bool {
 
 // F관리자_권한으로_재실행 : 관리자 권한으로 재실행
 func F관리자_권한으로_재실행() {
-	cmd := exec.Command("sudo", os.Args...)
+	// 현재 실행 중인 실행 파일의 경로를 얻습니다.
+	실행_파일_경로, 에러 := os.Executable()
+	if 에러 != nil {
+		panic("실행 파일 경로 획득 실패.")
+	}
+
+	args := append([]string{실행_파일_경로}, os.Args...)
+
+	cmd := exec.Command("sudo", args...)
 	cmd.Env = os.Environ()
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
