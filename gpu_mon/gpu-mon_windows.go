@@ -6,7 +6,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// 경고음 발생시키기
+// F경고음_발생 :  경고음 발생시키기
 func F경고음_발생() {
 	dll, 에러 := syscall.LoadDLL("user32.dll")
 	if 에러 != nil {
@@ -28,6 +28,7 @@ func F경고음_발생() {
 }
 
 // 참고 링크 : https://github.com/golang/go/issues/28804#issuecomment-505326268
+// F관리자_여부 : 관리자 권한 여부 확인
 func F관리자_여부() bool {
 	var sid *windows.SID
 
@@ -56,6 +57,7 @@ func F관리자_여부() bool {
 	}
 }
 
+// F관리자_권한으로_재실행 : 관리자 권한으로 재실행
 func F관리자_권한으로_재실행() {
 	verb := "runas"
 	exe, _ := os.Executable()
