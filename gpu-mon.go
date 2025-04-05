@@ -3,9 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	gm "github.com/ghts/nvidia-gpu-mon/gpu_mon"
 	"golang.org/x/exp/constraints"
-	"golang.org/x/sys/windows"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -13,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -160,7 +158,7 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64, 주의_요�
 
 		if 기준_온도_초과 {
 			과열_발생_클럭 = f최소값(현재_클럭, 과열_발생_클럭)
-			f경고음_발생()
+			gm.F경고음_발생()
 			주의_요망 = true
 			fmt.Printf("%s : %s. GPU 과열 방지를 위해서 클럭을 최저값으로 낮춥니다. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f최저_클럭()))
 		} else if f기준_온도_근접(기준_온도, 현재_온도, 온도_예측치) && 현재_클럭 > f최저_클럭() {
@@ -208,56 +206,6 @@ func f기준_온도_근접(기준_온도, 현재_온도, 온도_예측치 float6
 
 func f온도_상승_중(기준_온도, 현재_온도, 온도_예측치 float64) bool {
 	return 온도_예측치 > 현재_온도 && 온도_예측치 > 기준_온도-클럭_회복_기준
-}
-
-// 경고음 발생시키기
-func f경고음_발생() {
-	dll, 에러 := syscall.LoadDLL("user32.dll")
-	if 에러 != nil {
-		fmt.Println(에러)
-		return
-	}
-	defer dll.Release()
-
-	proc, 에러 := dll.FindProc("MessageBeep")
-	if 에러 != nil {
-		fmt.Println(에러)
-		return
-	}
-
-	반환값, _, _ := proc.Call(0xFFFFFFFF) // '0xFFFFFFFF'은 경고음 표준 주파수.
-	if 반환값 == 0 {
-		fmt.Println("경고음 발생 실패.")
-	}
-}
-
-// 참고 링크 : https://github.com/golang/go/issues/28804#issuecomment-505326268
-func f관리자_여부() bool {
-	var sid *windows.SID
-
-	// MS의 공식 안내를 Go언어로 포팅.
-	// MS의 C++ 공식 문서는 다음 링크를 참조한다.
-	// https://docs.microsoft.com/en-us/windows/desktop/api/securitybaseapi/nf-securitybaseapi-checktokenmembership
-	에러 := windows.AllocateAndInitializeSid(
-		&windows.SECURITY_NT_AUTHORITY,
-		2,
-		windows.SECURITY_BUILTIN_DOMAIN_RID,
-		windows.DOMAIN_ALIAS_RID_ADMINS,
-		0, 0, 0, 0, 0, 0,
-		&sid)
-	if 에러 != nil {
-		log.Fatalf("SID Error: %s", 에러)
-		return false
-	}
-	defer windows.FreeSid(sid)
-
-	token := windows.Token(0)
-
-	if 관리자_여부, 에러 := token.IsMember(sid); 에러 != nil {
-		return false
-	} else {
-		return 관리자_여부
-	}
 }
 
 func f숫자_추출(문자열 string) string {
@@ -311,25 +259,6 @@ func f평균값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
 	return 합계 / T(len(값_모음))
 }
 
-func f관리자_권한으로_재실행() {
-	verb := "runas"
-	exe, _ := os.Executable()
-	cwd, _ := os.Getwd()
-	args := strings.Join(os.Args[1:], " ")
-
-	verbPtr, _ := syscall.UTF16PtrFromString(verb)
-	exePtr, _ := syscall.UTF16PtrFromString(exe)
-	cwdPtr, _ := syscall.UTF16PtrFromString(cwd)
-	argPtr, _ := syscall.UTF16PtrFromString(args)
-
-	var showCmd int32 = 1 //SW_NORMAL
-
-	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
 func f클럭_정보_문자열_모음() []string {
 	커맨드_클럭 := exec.Command("nvidia-smi", "-q", "-d", "CLOCK")
 	출력_바이트_모음, 에러 := 커맨드_클럭.CombinedOutput()
@@ -372,9 +301,9 @@ func f현재_클럭() float64 {
 }
 
 func f클럭_변경(GPU클럭 float64) string {
-	if !f관리자_여부() {
+	if !gm.F관리자_여부() {
 		fmt.Printf("** GPU 동작 클럭을 변경하려면 '관리자 권한'이 필요합니다. **\n")
-		f관리자_권한으로_재실행()
+		gm.F관리자_권한으로_재실행()
 		close(Ch종료)
 	}
 
