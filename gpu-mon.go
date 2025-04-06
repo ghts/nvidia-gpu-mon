@@ -207,22 +207,6 @@ func f최대값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
 	return 최대값
 }
 
-func f최소값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
-	if len(값_모음) == 0 {
-		panic("입력값이 없습니다.")
-	}
-
-	최소값 := 값_모음[0]
-
-	for _, 값 := range 값_모음 {
-		if 값 < 최소값 {
-			최소값 = 값
-		}
-	}
-
-	return 최소값
-}
-
 func f평균값[T constraints.Float | constraints.Integer](값_모음 ...T) T {
 	if len(값_모음) == 0 {
 		panic("입력값이 없습니다.")
