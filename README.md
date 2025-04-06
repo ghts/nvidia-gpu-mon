@@ -11,8 +11,10 @@ Go언어 다운로드 : https://go.dev/dl/
 > go build gpu-mon.go
 
 - 기준 온도를 소스 코드 기본값으로 설정하고 실행
-> gpu-mon.exe 
+> 윈도우 : gpu-mon.exe 
+> 리눅스 : gpu-mon
 
 - 기준 온도를 55도로 설정하고 실행
-> gpu-mon.exe 55
+> 윈도우 : gpu-mon.exe 55
+> 리눅스 : gpu-mon 55
 
