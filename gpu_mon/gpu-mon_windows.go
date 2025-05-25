@@ -3,7 +3,12 @@
 package gpu_mon
 
 import (
+	"fmt"
 	"golang.org/x/sys/windows"
+	"log"
+	"os"
+	"strings"
+	"syscall"
 )
 
 // F경고음_발생 :  경고음 발생시키기
