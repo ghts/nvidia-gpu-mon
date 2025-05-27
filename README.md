@@ -1,12 +1,10 @@
 # DEPRECATED
-'nvidia-pstated'를 사용하세요.
+'nvidia-pstated'를 사용하세요. 대기 전력이 낮아집니다.
 https://github.com/sasha0552/nvidia-pstated/
 
 # nvidia-gpu-mon
-Nvidia GPU 온도 모니터링 : MS-윈도우 및 리눅스 지원됨.
-
-최고 클럭 대비 60%정도의 속도로 기본 작동.<br>
-(전성비 기준 최적 균형점이 최고 클럭 대비 60% 정도임.)<br>
+Nvidia GPU 온도 모니터링<br>
+MS-윈도우 및 리눅스 지원됨.<br>
 GPU온도 변화에 따라 과열되지 않도록 동작 클럭을 조절한다.<br>
 온도 관리 알고리즘이 초보적이지만, 과열 방지라는 목표는 적절하게 달성하는 것으로 보인다.<br>
 
