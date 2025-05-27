@@ -1,3 +1,7 @@
+# DEPRECATED
+'nvidia-pstated'를 사용하세요.
+https://github.com/sasha0552/nvidia-pstated/
+
 # nvidia-gpu-mon
 Nvidia GPU 온도 모니터링 : MS-윈도우 및 리눅스 지원됨.
 
