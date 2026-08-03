@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	gm "github.com/ghts/nvidia-gpu-mon/gpu_mon"
-	"golang.org/x/exp/constraints"
 	"os"
 	"os/exec"
 	"regexp"
@@ -13,6 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	gm "github.com/ghts/nvidia-gpu-mon/gpu_mon"
+	"golang.org/x/exp/constraints"
 )
 
 const (
@@ -152,7 +153,7 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64, 주의_요�
 			fmt.Printf("%s : %s. GPU 과열 방지를 위해서 클럭을 최저값으로 낮춥니다. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f최저_클럭()))
 		} else if f기준_온도_근접(기준_온도, 현재_온도, 온도_예측치) && 현재_클럭 > f최저_클럭() {
 			주의_요망 = true
-			fmt.Printf("%s : %s. 기준 온도 근접. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f한단계_낮은_클럭(현재_클럭)))
+			fmt.Printf("%s : %s. 기준 온도 근접. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f최저_클럭()))
 		} else if f온도_상승_중(기준_온도, 현재_온도, 온도_예측치) && 현재_클럭 > f최저_클럭() {
 			주의_요망 = true
 			fmt.Printf("%s : %s. 온도 상승 중. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f한단계_낮은_클럭(현재_클럭)))
@@ -272,7 +273,7 @@ func f클럭_변경(GPU클럭 float64) string {
 	ac인수 := 메모리_클럭_문자열 + "," + GPU_클럭_문자열
 
 	커맨드_실행 := exec.Command("nvidia-smi", "-ac", ac인수)
-	커맨드_실행.Run()
+	_ = 커맨드_실행.Run()
 
 	return GPU_클럭_문자열
 }
