@@ -20,8 +20,8 @@ const (
 	기준_온도_기본값 = 48.0
 	클럭_회복_기준  = 6.0
 
-	대기_시간_일반    = 10 * time.Second
-	대기_시간_주의_요망 = 1 * time.Second
+	대기_시간_long  = 10 * time.Second
+	대기_시간_short = 1 * time.Second
 )
 
 var (
@@ -31,22 +31,15 @@ var (
 )
 
 func main() {
-	// 초기 GPU 클럭을 전성비와 발열을 고려한 기본_클럭으로 변경
-	if f현재_클럭() < f기본_클럭() {
-		f클럭_변경(f기본_클럭())
-	}
-
 	fmt.Println("실행을 중지하려면 'Ctrl+C'를 누르세요.")
 	fmt.Printf("\n기준 온도 : %v°C, 현재 클럭 : %vMHz\n\n", int(f기준_온도()), int(f현재_클럭()))
 
 	// 초기값 설정.
 	최근_온도 := 0.0
-	주의_요망 := false
-	최근_경고_발생_시각 := time.Time{}
 
 	go func() {
 		for {
-			최근_온도, 주의_요망 = gpu온도_확인(최근_온도)
+			최근_온도 = gpu온도_확인(최근_온도)
 
 			// 종료 신호 발생 여부 확인.
 			select {
@@ -55,26 +48,16 @@ func main() {
 			default:
 			}
 
-			// 최근_경고_발생_시각 업데이트
-			if 주의_요망 {
-				최근_경고_발생_시각 = time.Now()
-			}
-
-			if f주의_요망(최근_경고_발생_시각) {
-				time.Sleep(대기_시간_주의_요망)
+			if f현재_클럭() < f기본_클럭() {
+				time.Sleep(대기_시간_short)
 			} else {
-				time.Sleep(대기_시간_일반)
+				time.Sleep(대기_시간_long)
 			}
 		}
 	}()
 
 	// Wait for a signal to ch종료 (e.g. Ctrl+C)
 	<-Ch종료
-}
-
-// f주의_요망 : 최근 경고 발생 후 10초 경과하기 전까지 주의 요망 상태 유지.
-func f주의_요망(최근_경고_발생_시각 time.Time) bool {
-	return time.Now().Before(최근_경고_발생_시각.Add(10 * time.Second))
 }
 
 func f기준_온도() float64 {
@@ -112,9 +95,8 @@ func gpu온도_측정() ([]float64, error) {
 	return 온도_모음, nil
 }
 
-func gpu온도_확인(최근_온도 float64) (현재_온도 float64, 주의_요망 bool) {
+func gpu온도_확인(최근_온도 float64) (현재_온도 float64) {
 	기준_온도 := f기준_온도()
-	주의_요망 = false
 
 	if 온도_모음, 에러 := gpu온도_측정(); 에러 == nil {
 		현재_온도 = f평균값(온도_모음...)
@@ -149,13 +131,10 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64, 주의_요�
 
 		if 기준_온도_초과 {
 			gm.F경고음_발생()
-			주의_요망 = true
 			fmt.Printf("%s : %s기준 온도 초과. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f최저_클럭()))
 		} else if f기준_온도_근접(기준_온도, 현재_온도, 온도_예측치) && 현재_클럭 > f최저_클럭() {
-			주의_요망 = true
 			fmt.Printf("%s : %s기준 온도 근접. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f최저_클럭()))
 		} else if f온도_상승_중(기준_온도, 현재_온도, 온도_예측치) && 현재_클럭 > f최저_클럭() {
-			주의_요망 = true
 			fmt.Printf("%s : %s%vMHz\n", 시각_문자열, 버퍼.String(), f클럭_변경(f한단계_낮은_클럭(현재_클럭)))
 
 			//} else if 현재_온도 < 기준_온도-(2*클럭_회복_기준) && 현재_클럭 < f기본_클럭() {
@@ -164,14 +143,12 @@ func gpu온도_확인(최근_온도 float64) (현재_온도 float64, 주의_요�
 			//	fmt.Printf("%s : %s. 온도가 낮아졌으므로 GPU 클럭을 회복합니다. [%vMHz]\n", 시각_문자열, 버퍼.String(), f클럭_변경(f기본_클럭()))
 		} else if 현재_온도 < 기준_온도-클럭_회복_기준 && 현재_클럭 < f기본_클럭() {
 			fmt.Printf("%s : %s%vMHz\n", 시각_문자열, 버퍼.String(), f클럭_변경(f한단계_높은_클럭(현재_클럭)))
-		} else if 현재_온도 < 기준_온도-(2*클럭_회복_기준) {
-			주의_요망 = false
 		} else {
 			fmt.Printf("%s : %s%sMHz.\n", 시각_문자열, 버퍼.String(), strconv.Itoa(int(현재_클럭)))
 		}
 	}
 
-	return 현재_온도, 주의_요망
+	return 현재_온도
 }
 
 func f기준_온도_근접(기준_온도, 현재_온도, 온도_예측치 float64) bool {
