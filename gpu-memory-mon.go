@@ -64,7 +64,7 @@ func main() {
 				if 에러 = gpu메모리_클럭_초기화(); 에러 != nil {
 					fmt.Printf("[%s] 오류 : 메모리 클럭 리셋 실패\n\n%v\n\n", 지금, 에러)
 				} else {
-					fmt.Printf("[%s] GPU 유휴 상태 연속 %d회 -> 클럭 잠금 해제 (Reset)\n", 지금, 유휴_상태_연속_횟수)
+					fmt.Printf("[%s] GPU 메모리 클럭 잠금 해제\n", 지금)
 					마지막_상태 = P상태_유휴
 
 					// LLM 작업이 종료되었으므로 사용자에게 알림음 발생.
@@ -85,7 +85,7 @@ func main() {
 				if 에러 = gpu메모리_클럭_고정(); 에러 != nil {
 					fmt.Printf("[%s] 오류 : 메모리 클럭 잠금 실패\n\n%v\n\n", 지금, 에러)
 				} else {
-					fmt.Printf("[%s] GPU 메모리 로드 : %d%% -> 클럭 잠금 활성화\n", 지금, GPU메모리_로드)
+					fmt.Printf("[%s] GPU 메모리 클럭 잠금 활성화\n", 지금)
 					마지막_상태 = P상태_로드
 				}
 			}
