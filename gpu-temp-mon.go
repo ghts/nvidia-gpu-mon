@@ -1,3 +1,5 @@
+//go:build temperature
+
 package main
 
 import (
@@ -15,6 +17,8 @@ import (
 	gm "github.com/ghts/nvidia-gpu-mon/gpu_mon"
 	"golang.org/x/exp/constraints"
 )
+
+// 자동 온도 조절 기능이 없는 연산 전용 GPU를 위한 온도 온도 모니터링
 
 const (
 	기준_온도_기본값 = 48.0
