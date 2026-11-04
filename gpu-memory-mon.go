@@ -35,6 +35,8 @@ const (
 
 type T상태 uint8
 
+var ch알림_중지 = make(chan bool, 1)
+
 func main() {
 	if !gm.F관리자_여부() {
 		fmt.Printf("** GPU 설정을 변경하려면 '관리자 권한'이 필요합니다. **\n")
@@ -71,7 +73,17 @@ func main() {
 							return // 새벽 시간에는 알림 소리 내리 않음.
 						}
 
+						// 기존에 존재하던 알림_중지 신호 삭제
+						select {
+						case <-ch알림_중지:
+						default:
+						}
+
 						for range 10 {
+							if f알림_중지_신호_존재() {
+								return
+							}
+
 							gm.F경고음_발생()
 							lb.F대기(lb.P10초)
 						}
@@ -80,6 +92,7 @@ func main() {
 			}
 		} else {
 			유휴_상태_연속_횟수 = 0 // 메모리 로드가 높아지면 연속 카운터 초기화
+			f알림_중지_신호_전송()
 
 			if 마지막_상태 != P상태_로드 {
 				if 에러 = gpu메모리_클럭_고정(); 에러 != nil {
@@ -149,4 +162,20 @@ func gpu메모리_클럭_고정() error {
 		return lb.New에러("[오류] 메모리 클럭 잠금 실패 : %v\n(stderr)\n%s", 에러, lb.F2문자열_공백_제거(string(출력)))
 	}
 	return nil
+}
+
+func f알림_중지_신호_존재() bool {
+	select {
+	case <-ch알림_중지:
+		return true
+	default:
+		return false
+	}
+}
+
+func f알림_중지_신호_전송() {
+	select {
+	case ch알림_중지 <- true:
+	default:
+	}
 }
